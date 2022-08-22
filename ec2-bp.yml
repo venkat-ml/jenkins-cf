@@ -1,0 +1,1103 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "EC2-Only Blueprint: Creates a single EC2 Instance"
+Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - E2520
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "EC2 Only Parameters"
+        Parameters:
+          - NodeName
+          - InstanceType
+          - InstanceProfileName
+          - SecurityGroups
+          - OsType
+          - Ec2PreferredAZ
+      - Label:
+          default: "Storage Parameters"
+        Parameters:
+          - EBSDeviceName
+          - EBSSize
+          - EBSType
+          - EBSIOPS
+          - EBS2DeviceName
+          - EBS2Size
+          - EBS2Type
+          - EBS2IOPS
+          - EBS3DeviceName
+          - EBS3Size
+          - EBS3Type
+          - EBS3IOPS
+          - EBS4DeviceName
+          - EBS4Size
+          - EBS4Type
+          - EBS4IOPS
+      - Label:
+          default: "Blueprint App Parameters"
+        Parameters:
+          - SecurityZone
+          - DataClassification
+          - ConfigureStoreBucket
+          - UserdataS3script
+          - PersistUserdataScript
+          - BluePrintTag
+          - AppSoe
+          - AppPort
+          - AppSecret
+          - LatestWindowsAmiId
+          - LatestLinuxAmiId
+      - Label:
+          default: "Management Zone Parameters"
+        Parameters:
+          - MgmtSubnets
+      - Label:
+          default: "IC Zone Parameters"
+        Parameters:
+          - IcSubnets
+      - Label:
+          default: "Security Zone Parameters"
+        Parameters:
+          - SecSubnets
+      - Label:
+          default: "Restricted Zone Parameters"
+        Parameters:
+          - ResSubnets
+      - Label:
+          default: "Custom Tag"
+        Parameters:
+          - CustomTag1Name
+          - CustomTag1Value
+          - CustomTag2Name
+          - CustomTag2Value
+          - CustomTag3Name
+          - CustomTag3Value
+          - CustomTag4Name
+          - CustomTag4Value
+          - CustomTag5Name
+          - CustomTag5Value
+          - CustomTag6Name
+          - CustomTag6Value
+          - CustomTag7Name
+          - CustomTag7Value
+          - CustomTag8Name
+          - CustomTag8Value
+          - CustomTag9Name
+          - CustomTag9Value
+          - CustomTag10Name
+          - CustomTag10Value
+
+    ParameterLabels:
+      SecurityZone:
+        default: "Security Zone"
+      DataClassification:
+        default: "Data Classification"
+      NodeName:
+        default: "Node Name"
+      SecurityGroups:
+        default: "Security Groups"
+      OsType:
+        default: "OS Type"
+      AppSoe:
+        default: "Application SOE AMI Id"
+      LatestWindowsAmiId:
+        default: "Latest Windows AMI Id"
+      LatestLinuxAmiId:
+        default: "Latest Linux AMI Id"
+      AppPort:
+        default: "Application Port"
+      AppSecret:
+        default: "Application Secret"
+      ConfigureStoreBucket:
+        default: "Existing ConfigureStore S3 Bucket Name created by S3 Blueprint"
+      UserdataS3script:
+        default: "User Data S3 Script Path"
+      PersistUserdataScript:
+        default: "User Data Persist, Windows only"
+      EBSDeviceName:
+        default: "EBS Device Name.Default /dev/sda1"
+      EBSSize:
+        default: "EBS Volume Size"
+      EBSType:
+        default: "EBS Volume Type"
+      EBSIOPS:
+        default: "EBS Volume IOPS."
+      Ec2PreferredAZ:
+        default: "EC2 Preferred Subnet"
+      InstanceProfileName:
+        default: "Instance Profile Name"
+      InstanceType:
+        default: "Instance Type"
+      MgmtSubnets:
+        default: "The list of Subnet IDs in your Management Zone Virtual Private Cloud (VPC)"
+      IcSubnets:
+        default: "IC Zone list of Subnet IDs"
+      SecSubnets:
+        default: "Security Zone security group list of Subnet IDs"
+      ResSubnets:
+        default: "Restricted Zone list of Subnet IDs"
+
+Parameters:
+  # EC2 Only Parameters
+  NodeName:
+    Type: String
+    Description: unique application name.
+  InstanceType:
+    Description: Any valid EC2 instance size is allowed.
+    Default: t3.micro
+    Type: String
+  # Storage Parameters
+  EBSDeviceName:
+    Description: EBS Device Name. Default /dev/sda1
+    Default: "/dev/sda1"
+    Type: String
+  EBSSize:
+    Description: Size of root EBS volume
+    Default: 50
+    Type: Number
+  EBSType:
+    Description: EBS Volume Type.
+    Default: gp3
+    Type: String
+    AllowedValues: [gp2, gp3, io1, io2, sc1, st1, standard]
+  EBSIOPS:
+    Type: Number
+    Description: "[Required only for gp3 (default 3,000), io1 and io2 volumes]. This parameter is not applicable for other EBS volume types (sc1, st1, standard), please leave it as the default number if that is the case. "
+    Default: 3000
+  EBS2DeviceName:
+    Description: "(optional:) If the VM is HVM type, 2nd EBS Device Name:/dev/sd[b-z] or /dev/xvd[b-c][a-z] depending on linux or windows OS (check naming convension: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html). Leave blank if a 2nd EBS Volume is not Required."
+    Default: ""
+    Type: String
+  EBS2Size:
+    Description: "(optional) Size of 2nd EBS volume. Leave blank if a 2nd EBS Volume is not Required."
+    Default: 10
+    Type: Number
+  EBS2Type:
+    Description: "(optional) 2nd EBS Volume Type. Leave blank if a 2nd EBS Volume is not Required."
+    Type: String
+    Default: ""
+    AllowedValues: [gp2, gp3, io1, io2, sc1, st1, standard, ""]
+  EBS2IOPS:
+    Type: Number
+    Description: "[Required only for gp3 (default 3,000), io1 and io2 volumes]. This parameter is not applicable for other EBS volume types (sc1, st1, standard), please leave it as the default number if that is the case. "
+    Default: 3000
+  EBS3DeviceName:
+    Description: "(optional:) If the VM is HVM type, 3rd EBS Device Name:/dev/sd[b-z] or /dev/xvd[b-c][a-z] depending on linux or windows OS (check naming convension: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html). Leave blank if a 3rd EBS Volume is not Required."
+    Default: ""
+    Type: String
+  EBS3Size:
+    Description: "(optional) Size of 3rd EBS volume. Leave blank if a 3rd EBS Volume is not Required."
+    Default: 10
+    Type: Number
+  EBS3Type:
+    Description: "(optional) 3rd EBS Volume Type. Leave blank if a 3rd EBS Volume is not Required."
+    Default: ""
+    Type: String
+    AllowedValues: [gp2, gp3, io1, io2, sc1, st1, standard, ""]
+  EBS3IOPS:
+    Type: Number
+    Description: "[Required only for gp3 (default 3,000), io1 and io2 volumes]. This parameter is not applicable for other EBS volume types (sc1, st1, standard), please leave it as the default number if that is the case. "
+    Default: 3000
+  EBS4DeviceName:
+    Description: "(optional:) If the VM is HVM type, 4th EBS Device Name:/dev/sd[b-z] or /dev/xvd[b-c][a-z] depending on linux or windows OS (check naming convension: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html). Leave blank if a 4th EBS Volume is not Required."
+    Default: ""
+    Type: String
+  EBS4Size:
+    Description: "(optional) Size of 4th EBS volume. Leave blank if a 4th EBS Volume is not Required."
+    Default: 10
+    Type: Number
+  EBS4Type:
+    Description: "(optional) 4th EBS Volume Type. Leave blank if a 4th EBS Volume is not Required."
+    Default: ""
+    Type: String
+    AllowedValues: [gp2, gp3, io1, io2, sc1, st1, standard, ""]
+  EBS4IOPS:
+    Type: Number
+    Description: "[Required only for gp3 (default 3,000), io1 and io2 volumes]. This parameter is not applicable for other EBS volume types (sc1, st1, standard), please leave it as the default number if that is the case. "
+    Default: 3000
+
+  Ec2PreferredAZ:
+    Type: String
+    Description: EC2 Preferred Subnet
+    AllowedValues: [ap-southeast-2a, ap-southeast-2b, ap-southeast-2c]
+  InstanceProfileName:
+    Description: "The instance profile Name for EC2. Standard L2 BP Instance Profile for the tenants (if pre-created !!!). if not provided, a new profile will be created with minimum permessions to read from ConfigureStore bucket and read a sample secret stored in secrets manager."
+    Type: String
+  SecurityGroups:
+    Description: "Existing security groups to associate with instance (optional)"
+    Type: String
+  OsType:
+    Description: Operating system, Windows or Linux
+    Default: linux
+    Type: String
+    AllowedValues: [windows, linux]
+  UserdataS3script:
+    Type: String
+    Description: please provide the script KeyName under S3 bucket e.g./abc/scripts.sh if the script under abc folder named as scripts.sh
+  PersistUserdataScript:
+    Description: By default, the user data scripts are run one time when you launch the instance. To run the user data scripts every time you reboot or start the instance(Windows only),change it to true
+    Default: "false"
+    Type: String
+    AllowedValues: ["false", "true"]
+
+  #BluePrint App Parameters
+  SecurityZone:
+    Default: ic
+    Type: String
+    Description: Security Zone for the Blueprint
+    AllowedValues: [ic, mgmt, res, sec]
+  DataClassification:
+    Default: Confidential
+    Type: String
+    Description: Data Classification for the Blueprint
+    AllowedValues:
+      [GroupUse, Public, Confidential, CustomerPersonal, HighlyProtected]
+  ConfigureStoreBucket:
+    Description: Existing ConfigureStore S3 Bucket Name created by S3 Blueprint.
+    Type: String
+  AppPort:
+    Description: application tcp port. there is no support for UDP applications at the moment.
+    Default: 443
+    Type: Number
+  AppSoe:
+    Default: ""
+    Type: String
+    Description: sampleapp SOE AMI to use. if not provided, latest windows or linux ami will be used
+  LatestLinuxAmiId:
+    Description: Latest CBA Approved Linux AMI Id
+    Type: String
+  LatestWindowsAmiId:
+    Description: Latest CBA Approved Windows AMI Id
+    Type: String
+  AppSecret:
+    NoEcho: true # Values to be hidden
+    Type: String
+    Default: "MySecretValue"
+  BluePrintTag:
+    Default: EC2-Only-Blueprint
+    Type: String
+
+  # ## Management zone Parameters
+  MgmtSubnets:
+    Default: "/CNS/resources/subnets/mgmt/all"
+    AllowedValues:
+      - "/CNS/resources/subnets/mgmt/all"
+    Type: "AWS::SSM::Parameter::Value<List<String>>"
+    Description: The list of Subnet IDs in your Virtual Private Cloud (VPC)
+    ConstraintDescription: must be valid subnets in which you can launch the EC2 instances
+  # ## IC zone Parameters
+  IcSubnets:
+    Default: "/CNS/resources/subnets/ic/all"
+    AllowedValues:
+      - "/CNS/resources/subnets/ic/all"
+    Type: "AWS::SSM::Parameter::Value<List<String>>"
+    Description: The list of Subnet IDs in your Virtual Private Cloud (VPC)
+    ConstraintDescription: must be valid subnets in which you can launch the EC2 instances
+  # ## Sec zone Parameters
+  SecSubnets:
+    Default: "/CNS/resources/subnets/sec/all"
+    AllowedValues:
+      - "/CNS/resources/subnets/sec/all"
+    Type: "AWS::SSM::Parameter::Value<List<String>>"
+    Description: The list of Subnet IDs in your Virtual Private Cloud (VPC)
+    ConstraintDescription: must be valid subnets in which you can launch the EC2 instances
+  # ## Restricted zone Parameters
+  ResSubnets:
+    Default: "/CNS/resources/subnets/res/all"
+    AllowedValues:
+      - "/CNS/resources/subnets/res/all"
+    Type: "AWS::SSM::Parameter::Value<List<String>>"
+    Description: The list of Subnet IDs in your Virtual Private Cloud (VPC)
+    ConstraintDescription: must be valid subnets in which you can launch the EC2 instances
+  # ## Custom Tag Parameters
+  CustomTag1Name:
+    Default: ""
+    Type: String
+    Description: Custom Tag Name for EC2
+  CustomTag1Value:
+    Default: ""
+    Type: String
+    Description: Custom Tag Value for EC2
+  CustomTag2Name:
+    Default: ""
+    Type: String
+    Description: Custom Tag Name for EC2
+  CustomTag2Value:
+    Default: ""
+    Type: String
+    Description: Custom Tag Value for EC2
+  CustomTag3Name:
+    Default: ""
+    Type: String
+    Description: Custom Tag Name for EC2
+  CustomTag3Value:
+    Default: ""
+    Type: String
+    Description: Custom Tag Value for EC2
+  CustomTag4Name:
+    Default: ""
+    Type: String
+    Description: Custom Tag Name for EC2
+  CustomTag4Value:
+    Default: ""
+    Type: String
+    Description: Custom Tag Value for EC2
+  CustomTag5Name:
+    Default: ""
+    Type: String
+    Description: Custom Tag Name for EC2
+  CustomTag5Value:
+    Default: ""
+    Type: String
+    Description: Custom Tag Value for EC2
+  CustomTag6Name:
+    Default: ""
+    Type: String
+    Description: Custom Tag Name for EC2
+  CustomTag6Value:
+    Default: ""
+    Type: String
+    Description: Custom Tag Value for EC2
+  CustomTag7Name:
+    Default: ""
+    Type: String
+    Description: Custom Tag Name for EC2
+  CustomTag7Value:
+    Default: ""
+    Type: String
+    Description: Custom Tag Value for EC2
+  CustomTag8Name:
+    Default: ""
+    Type: String
+    Description: Custom Tag Name for EC2
+  CustomTag8Value:
+    Default: ""
+    Type: String
+    Description: Custom Tag Value for EC2
+  CustomTag9Name:
+    Default: ""
+    Type: String
+    Description: Custom Tag Name for EC2
+  CustomTag9Value:
+    Default: ""
+    Type: String
+    Description: Custom Tag Value for EC2
+  CustomTag10Name:
+    Default: ""
+    Type: String
+    Description: Custom Tag Name for EC2
+  CustomTag10Value:
+    Default: ""
+    Type: String
+    Description: Custom Tag Value for EC2
+
+Conditions:
+  SydRegion: !Equals
+    - !Sub ${AWS::Region}
+    - ap-southeast-2
+
+  isSupportedRegion: !Or
+    - !Condition SydRegion
+    - !Condition SydRegion #Placeholder for additional regions supported
+
+  # InstanceProfile
+  InstanceProfileNotProvided: !And
+    - !Condition isSupportedRegion
+    - !Equals
+      - !Ref InstanceProfileName
+      - ""
+  #EC2-only Conditions
+  AppSoeProvided:
+    Fn::Not:
+      - !Equals # use custom ami if provided
+        - !Ref AppSoe
+        - ""
+  # Whether Security Groups are provided
+  SecurityGroupsProvided:
+    Fn::Not:
+      - !Equals
+        - !Ref SecurityGroups
+        - ""
+  UserdataS3scriptProvided:
+    Fn::Not:
+      - !Equals # use custom userdata script if provided
+        - !Ref UserdataS3script
+        - ""
+  PersistUserdataScriptProvided:
+    Fn::Not:
+      - !Equals # use persist custom userdata tag if true
+        - !Ref PersistUserdataScript
+        - "false"
+
+  EBS2NotProvided: !Not
+    - !Equals
+      - !Ref EBS2DeviceName
+      - ""
+
+  EBS3NotProvided: !Not
+    - !Equals
+      - !Ref EBS3DeviceName
+      - ""
+
+  EBS4NotProvided: !Not
+    - !Equals
+      - !Ref EBS4DeviceName
+      - ""
+
+  UseEBSiops:
+    Fn::Or:
+      - !Equals # io1,io2,gp3 support IOPS, others e.g. gp2, st1, sc1, or standard not supported
+        - !Ref EBSType
+        - "io1"
+      - !Equals
+        - !Ref EBSType
+        - "io2"
+      - !Equals
+        - !Ref EBSType
+        - "gp3"
+
+  UseEBS2iops:
+    Fn::Or:
+      - !Equals # io1,io2,gp3 support IOPS, others e.g. gp2, st1, sc1, or standard not supported
+        - !Ref EBS2Type
+        - "io1"
+      - !Equals
+        - !Ref EBS2Type
+        - "io2"
+      - !Equals
+        - !Ref EBS2Type
+        - "gp3"
+
+  UseEBS3iops:
+    Fn::Or:
+      - !Equals # io1,io2,gp3 support IOPS, others e.g. gp2, st1, sc1, or standard not supported
+        - !Ref EBS3Type
+        - "io1"
+      - !Equals
+        - !Ref EBS3Type
+        - "io2"
+      - !Equals
+        - !Ref EBS3Type
+        - "gp3"
+
+  UseEBS4iops:
+    Fn::Or:
+      - !Equals # io1,io2,gp3 support IOPS, others e.g. gp2, st1, sc1, or standard not supported
+        - !Ref EBS4Type
+        - "io1"
+      - !Equals
+        - !Ref EBS4Type
+        - "io2"
+      - !Equals
+        - !Ref EBS4Type
+        - "gp3"
+
+  LinuxOs: !Equals # OS type is windows if not linux
+    - !Ref OsType
+    - linux
+
+  # Custom Tag exist
+  CustomTag1NotProvided: !Equals
+    - !Ref CustomTag1Name
+    - ""
+  CustomTag2NotProvided: !Equals
+    - !Ref CustomTag2Name
+    - ""
+  CustomTag3NotProvided: !Equals
+    - !Ref CustomTag3Name
+    - ""
+  CustomTag4NotProvided: !Equals
+    - !Ref CustomTag4Name
+    - ""
+  CustomTag5NotProvided: !Equals
+    - !Ref CustomTag5Name
+    - ""
+  CustomTag6NotProvided: !Equals
+    - !Ref CustomTag6Name
+    - ""
+  CustomTag7NotProvided: !Equals
+    - !Ref CustomTag7Name
+    - ""
+  CustomTag8NotProvided: !Equals
+    - !Ref CustomTag8Name
+    - ""
+  CustomTag9NotProvided: !Equals
+    - !Ref CustomTag9Name
+    - ""
+  CustomTag10NotProvided: !Equals
+    - !Ref CustomTag10Name
+    - ""
+
+  MgmtZone: !Equals
+    - !Ref SecurityZone
+    - "mgmt"
+  IcZone: !Equals
+    - !Ref SecurityZone
+    - "ic"
+  ResZone: !Equals
+    - !Ref SecurityZone
+    - "res"
+  SecZone: !Equals
+    - !Ref SecurityZone
+    - "sec"
+    ## Check with the preferred subnet
+  PrimaryAzA: !Equals
+    - !Ref Ec2PreferredAZ
+    - "ap-southeast-2a"
+  PrimaryAzB: !Equals
+    - !Ref Ec2PreferredAZ
+    - "ap-southeast-2b"
+  PrimaryAzC: !Equals
+    - !Ref Ec2PreferredAZ
+    - "ap-southeast-2c"
+
+#The following settings are pre created as part of account bootstrapping
+Mappings:
+  SecurityZone:
+    mgmt:
+      SecurityGroupID: "{{resolve:ssm:/CNS/resources/mgmt_sg}}"
+      WindowsSGID: "{{resolve:ssm:/CNS/resources/sg/win_mgmt_id}}"
+      LinuxSGID: "{{resolve:ssm:/CNS/resources/sg/linux_mgmt_id}}"
+    ic:
+      SecurityGroupID: "{{resolve:ssm:/CNS/resources/ic_sg}}"
+    res:
+      SecurityGroupID: "{{resolve:ssm:/CNS/resources/res_sg}}"
+    sec:
+      SecurityGroupID: "{{resolve:ssm:/CNS/resources/sec_sg}}"
+  EC2Parameters:
+    default:
+      VpcId: "{{resolve:ssm:/CNS/resources/vpc_id}}"
+      R53PrivateZoneId: "{{resolve:ssm:/CNS/resources/r53/private_zone_id}}"
+      R53PrivateZoneName: "{{resolve:ssm:/CNS/resources/r53/private_zone_name}}"
+      KMSKeyId: "{{resolve:ssm:/CNS/resources/secretsmanager_key_id}}"
+      EBSKeyId: "{{resolve:ssm:/CNS/resources/ebs_key_id}}"
+      S3KeyId: "{{resolve:ssm:/CNS/resources/s3_key_id}}"
+
+Resources:
+  # Security Groups
+  AppSg:
+    Type: AWS::EC2::SecurityGroup
+    Condition: isSupportedRegion
+    Properties:
+      GroupDescription: App SG
+      VpcId: !FindInMap [EC2Parameters, default, VpcId]
+      SecurityGroupEgress:
+        - CidrIp: 127.0.0.1/32
+          IpProtocol: "-1"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref AppPort
+          ToPort: !Ref AppPort
+          CidrIp: "10.0.0.0/8" # This is only approved for web services only for internal ip addresses
+        - IpProtocol: tcp
+          FromPort: !Ref AppPort
+          ToPort: !Ref AppPort
+          CidrIp: "172.31.0.0/16" # This is only approved for web services only for internal ip addresses
+      Tags:
+        - Key: DataClassification
+          Value: !Ref DataClassification
+        - Key: BluePrint
+          Value: !Ref BluePrintTag
+        - Key: Name
+          Value: !Sub ${NodeName}-instance-sg
+
+  ## Instance IAM Profile, Role and policy
+  Ec2InstanceProfilePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: InstanceProfileNotProvided ## Adding this to add conditions
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: "s3:ListAllMyBuckets"
+            Resource: "arn:aws:s3:::*"
+          - Effect: Allow
+            Action:
+              - "s3:ListBucket"
+              - "s3:GetBucketLocation"
+            Resource: !Join
+              - ""
+              - - "arn:aws:s3:::"
+                - !Ref ConfigureStoreBucket
+          - Effect: Allow
+            Action:
+              - "s3:GetObject"
+              - "s3:GetObjectVersion"
+            Resource: !Join
+              - ""
+              - - "arn:aws:s3:::"
+                - !Ref ConfigureStoreBucket
+          - Effect: Allow
+            Action:
+              - "secretsmanager:GetResourcePolicy"
+              - "secretsmanager:GetSecretValue"
+              - "secretsmanager:DescribeSecret"
+              - "secretsmanager:ListSecretVersionIds"
+              - "secretsmanager:ListSecrets"
+            Resource: !Ref AppSecretSecretsManager
+  InstanceProfileRole:
+    Type: AWS::IAM::Role
+    Condition: InstanceProfileNotProvided
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - !Ref Ec2InstanceProfilePolicy
+        - !Sub "arn:aws:iam::${AWS::AccountId}:policy/BootstrapMandatoryInstancePolicy"
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+        - "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess"
+      Tags:
+        - Key: DataClassification
+          Value: !Ref DataClassification
+        - Key: BluePrint
+          Value: !Ref BluePrintTag
+
+  Ec2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Condition: InstanceProfileNotProvided
+    Properties:
+      Path: "/"
+      Roles:
+        - Ref: "InstanceProfileRole"
+
+  #Store Instance Profile ARN on SSM parameter
+  InstanceProfileSsmParameter:
+    Type: AWS::SSM::Parameter
+    Condition: isSupportedRegion
+    Properties:
+      Name: !Sub /patterns/${NodeName}/resources/instance_profile_name
+      Description: !Sub "InstanceProfile Name of ${NodeName}"
+      Value: !If
+        - InstanceProfileNotProvided
+        - !Ref Ec2InstanceProfile
+        - !Ref InstanceProfileName
+      Type: String
+      Tags:
+        DataClassification: !Ref DataClassification
+        BluePrint: !Ref BluePrintTag
+
+  #Store APP Secret on Secret Manager
+  AppSecretSecretsManager:
+    Type: AWS::SecretsManager::Secret
+    Condition: isSupportedRegion
+    Properties:
+      Description: application specific secret
+      KmsKeyId: !FindInMap [EC2Parameters, default, KMSKeyId]
+      SecretString: !Sub '{"username": mysecretname", "password": ${AppSecret}}'
+      Tags:
+        - Key: DataClassification
+          Value: !Ref DataClassification
+        - Key: BluePrint
+          Value: !Ref BluePrintTag
+
+  #Store APP Secret on SSM Parameter Store
+  AppSecretSSMParameter:
+    Type: AWS::SSM::Parameter
+    Condition: isSupportedRegion
+    Properties:
+      Name: !Sub /patterns/${NodeName}/resources/app_secret
+      Description: dummy app secret
+      Value: !Ref AppSecret
+      Type: String
+      Tags:
+        DataClassification: !Ref DataClassification
+        BluePrint: !Ref BluePrintTag
+
+  #IAM Role for Lambda Function
+  DisableIMDSv1LambdaRole:
+    Type: AWS::IAM::Role
+    Condition: isSupportedRegion
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ["lambda.amazonaws.com"]
+            Action: ["sts:AssumeRole"]
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DisableIMDSv1
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action: "ec2:modifyInstanceMetadataOptions"
+                Resource:
+                  - !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*"
+
+  #Store Lambda Function ARN on SSM Parameter
+  DisableIMDSv1LambdaRoleSSMParameter:
+    Type: AWS::SSM::Parameter
+    Condition: isSupportedRegion
+    Properties:
+      Name: !Sub /patterns/${NodeName}/resources/disableIMDSv1_lambda_role
+      Description: DisableIMDSv1 lambda role
+      Value: !GetAtt ["DisableIMDSv1LambdaRole", "Arn"]
+      Type: String
+      Tags:
+        DataClassification: !Ref DataClassification
+        BluePrint: !Ref BluePrintTag
+  # EC2 Instance
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Condition: isSupportedRegion
+    Properties:
+      ImageId: !If
+        - AppSoeProvided
+        - !Ref AppSoe
+        - !If
+          - LinuxOs
+          - !Ref LatestLinuxAmiId
+          - !Ref LatestWindowsAmiId
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !If
+        - InstanceProfileNotProvided
+        - !Ref Ec2InstanceProfile
+        - !Ref InstanceProfileName
+      Monitoring: True
+      BlockDeviceMappings:
+        - DeviceName: !Ref EBSDeviceName
+          Ebs:
+            VolumeSize: !Ref EBSSize
+            VolumeType: !Ref EBSType
+            Iops: # If EBS support Iops, then use the EBSIops, otherwise just use no value
+              !If [UseEBSiops, !Ref EBSIOPS, !Ref "AWS::NoValue"]
+            KmsKeyId: !FindInMap [EC2Parameters, default, EBSKeyId]
+            Encrypted: True
+            DeleteOnTermination: True
+        # (Optional) If no settings were provided for 2nd EBS it won't be created
+        - !If
+          - EBS2NotProvided
+          - DeviceName: !Ref EBS2DeviceName
+            Ebs:
+              VolumeSize: !Ref EBS2Size
+              VolumeType: !Ref EBS2Type
+              Iops: # If EBS support Iops, then use the EBSIops, otherwise just use no value
+                !If [UseEBS2iops, !Ref EBS2IOPS, !Ref "AWS::NoValue"]
+              KmsKeyId: !FindInMap [EC2Parameters, default, EBSKeyId]
+              Encrypted: True
+              DeleteOnTermination: True
+          - !Ref AWS::NoValue
+        # (Optional) If no settings were provided for 3rd EBS it won't be created
+        - !If
+          - EBS3NotProvided
+          - DeviceName: !Ref EBS3DeviceName
+            Ebs:
+              VolumeSize: !Ref EBS3Size
+              VolumeType: !Ref EBS3Type
+              Iops: # If EBS support Iops, then use the EBSIops, otherwise just use no value
+                !If [UseEBS3iops, !Ref EBS3IOPS, !Ref "AWS::NoValue"]
+              KmsKeyId: !FindInMap [EC2Parameters, default, EBSKeyId]
+              Encrypted: True
+              DeleteOnTermination: True
+          - !Ref AWS::NoValue
+        # (Optional) If no settings were provided for 4th EBS it won't be created
+        - !If
+          - EBS4NotProvided
+          - DeviceName: !Ref EBS4DeviceName
+            Ebs:
+              VolumeSize: !Ref EBS4Size
+              VolumeType: !Ref EBS4Type
+              Iops: # If EBS support Iops, then use the EBSIops, otherwise just use no value
+                !If [UseEBS4iops, !Ref EBS4IOPS, !Ref "AWS::NoValue"]
+              KmsKeyId: !FindInMap [EC2Parameters, default, EBSKeyId]
+              Encrypted: True
+              DeleteOnTermination: True
+          - !Ref AWS::NoValue
+
+      SubnetId: !If
+        - MgmtZone
+        - !If
+          - PrimaryAzA
+          - !Select [0, !Ref MgmtSubnets]
+          - !If
+            - PrimaryAzC
+            - !Select [1, !Ref MgmtSubnets]
+            - !If
+              - PrimaryAzB
+              - !Select [2, !Ref MgmtSubnets]
+              - !Ref "AWS::NoValue" ## should never happen
+
+        - !If
+          - IcZone
+          - !If
+            - PrimaryAzA
+            - !Select [0, !Ref IcSubnets]
+            - !If
+              - PrimaryAzC
+              - !Select [1, !Ref IcSubnets]
+              - !If
+                - PrimaryAzB
+                - !Select [2, !Ref IcSubnets]
+                - !Ref "AWS::NoValue" # will never happen
+
+          - !If
+            - ResZone
+            - !If
+              - PrimaryAzA
+              - !Select [0, !Ref ResSubnets]
+              - !If
+                - PrimaryAzC
+                - !Select [1, !Ref ResSubnets]
+                - !If
+                  - PrimaryAzB
+                  - !Select [2, !Ref ResSubnets]
+                  - !Ref "AWS::NoValue" # will never happen
+
+            - !If
+              - SecZone
+              - !If
+                - PrimaryAzA
+                - !Select [0, !Ref SecSubnets]
+                - !If
+                  - PrimaryAzC
+                  - !Select [1, !Ref SecSubnets]
+                  - !If
+                    - PrimaryAzB
+                    - !Select [2, !Ref SecSubnets]
+                    - !Ref "AWS::NoValue" # will never happen
+              - !Ref "AWS::NoValue" # this should never happen
+
+      SecurityGroupIds: !Split
+        - ","
+        - !Join
+          - ","
+          - - !If
+              - SecurityGroupsProvided
+              - !Ref SecurityGroups
+              - !Ref "AWS::NoValue"
+            - !If
+              - LinuxOs
+              - !FindInMap [SecurityZone, mgmt, LinuxSGID]
+              - !FindInMap [SecurityZone, mgmt, WindowsSGID]
+            - !If
+              - MgmtZone
+              - !FindInMap [SecurityZone, mgmt, SecurityGroupID]
+              - !If
+                - IcZone
+                - !FindInMap [SecurityZone, ic, SecurityGroupID]
+                - !If
+                  - ResZone
+                  - !FindInMap [SecurityZone, res, SecurityGroupID]
+                  - !If
+                    - SecZone
+                    - !FindInMap [SecurityZone, sec, SecurityGroupID]
+                    - !Ref "AWS::NoValue" # this should never happen
+            - !Ref AppSg
+      Tags:
+        - Key: DataClassification
+          Value: !Ref DataClassification
+        - Key: BluePrint
+          Value: !Ref BluePrintTag
+        - Key: Name
+          Value: !Join ["-", [!Ref NodeName, "app-instance"]]
+        - !If
+          - CustomTag1NotProvided
+          - !Ref "AWS::NoValue"
+          - Key: !Ref CustomTag1Name
+            Value: !Ref CustomTag1Value
+        - !If
+          - CustomTag2NotProvided
+          - !Ref "AWS::NoValue"
+          - Key: !Ref CustomTag2Name
+            Value: !Ref CustomTag2Value
+        - !If
+          - CustomTag3NotProvided
+          - !Ref "AWS::NoValue"
+          - Key: !Ref CustomTag3Name
+            Value: !Ref CustomTag3Value
+        - !If
+          - CustomTag4NotProvided
+          - !Ref "AWS::NoValue"
+          - Key: !Ref CustomTag4Name
+            Value: !Ref CustomTag4Value
+        - !If
+          - CustomTag5NotProvided
+          - !Ref "AWS::NoValue"
+          - Key: !Ref CustomTag5Name
+            Value: !Ref CustomTag5Value
+        - !If
+          - CustomTag6NotProvided
+          - !Ref "AWS::NoValue"
+          - Key: !Ref CustomTag6Name
+            Value: !Ref CustomTag6Value
+        - !If
+          - CustomTag7NotProvided
+          - !Ref "AWS::NoValue"
+          - Key: !Ref CustomTag7Name
+            Value: !Ref CustomTag7Value
+        - !If
+          - CustomTag8NotProvided
+          - !Ref "AWS::NoValue"
+          - Key: !Ref CustomTag8Name
+            Value: !Ref CustomTag8Value
+        - !If
+          - CustomTag9NotProvided
+          - !Ref "AWS::NoValue"
+          - Key: !Ref CustomTag9Name
+            Value: !Ref CustomTag9Value
+        - !If
+          - CustomTag10NotProvided
+          - !Ref "AWS::NoValue"
+          - Key: !Ref CustomTag10Name
+            Value: !Ref CustomTag10Value
+
+      UserData: !If
+        - UserdataS3scriptProvided
+        - !If #if UserdataS3script is Provided, then it will run below section depending on the OS type
+          - LinuxOs
+          - Fn::Base64: !Sub |
+              #! /bin/bash
+              # under home folder, it will create a userdata folder. the script will be downloaded from S3 ConfigureStoreBucket and be renamed to bootstrap.sh. Then it will execute bootstrap.sh
+              cd ~
+              mkdir -p userdata
+              aws s3 cp s3://${ConfigureStoreBucket}/${UserdataS3script} ~/userdata/bootstrap.sh
+              sudo chmod +x ~/userdata/bootstrap.sh
+              ~/userdata/bootstrap.sh
+
+          - !If # if persist tag needed (Windows instance only) (By default, the user data scripts are run one time when you launch the instance. To run the user data scripts every time you reboot or start the instance, add <persist>true</persist> to the user data.)
+            - PersistUserdataScriptProvided
+
+            - Fn::Base64: !Sub |
+                <powershell>
+                # the script will be downloaded from S3 ConfigureStoreBucket and be renamed to startup.ps1. Then it will execute startup.ps1
+                Read-S3Object -BucketName ${ConfigureStoreBucket} -Key ${UserdataS3script} -File startup.ps1 -Region ${AWS::Region}
+                ./startup.ps1
+                </powershell>
+                <persist>true</persist>
+
+            - Fn::Base64: !Sub |
+                <powershell>
+                # the script will be downloaded from S3 ConfigureStoreBucket and be renamed to startup.ps1. Then it will execute startup.ps1
+                Read-S3Object -BucketName ${ConfigureStoreBucket} -Key ${UserdataS3script} -File startup.ps1 -Region ${AWS::Region}
+                ./startup.ps1
+                </powershell>
+          
+          
+          
+        - !If # if there is no script file provided from s3, it will run below dummy default script depends on the OS type
+          - LinuxOs
+          - Fn::Base64: |
+              # No userdata script provided for linux
+
+          - Fn::Base64: |
+              # No userdata script provided for windows
+
+  #'A' Record Set on Route53
+  DnsRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: isSupportedRegion
+    Properties:
+      ResourceRecords:
+        - !GetAtt EC2Instance.PrivateIp
+      HostedZoneId: !FindInMap [EC2Parameters, default, R53PrivateZoneId]
+      Name:
+        !Join [
+          "",
+          [
+            !Ref NodeName,
+            ".",
+            !FindInMap [EC2Parameters, default, R53PrivateZoneName],
+          ],
+        ]
+      TTL: 900
+      Type: A
+
+  # Custom Resource to disable IMDSv1 metadata
+  DisableIMDSv1:
+    Type: Custom::DisableIMDSv1
+    Condition: isSupportedRegion
+    Properties:
+      ServiceToken: !GetAtt ["DisableIMDSv1LambdaFunction", "Arn"]
+      instanceId: !Ref EC2Instance
+
+  #Lambda-backed for Custom Resource -  Disable IMDSv1 metadata
+  DisableIMDSv1LambdaFunction:
+    Type: AWS::Lambda::Function
+    Condition: isSupportedRegion
+    Properties:
+      Description: disable IMDSv1
+      FunctionName: !Join ["-", [!Ref NodeName, "DisableIMDSv1"]]
+      Role: !GetAtt ["DisableIMDSv1LambdaRole", "Arn"]
+      Timeout: 10
+      Handler: index.lambda_handler
+      Runtime: python3.9
+      Code:
+        ZipFile: |
+          import boto3
+          import botocore
+          import json
+          import cfnresponse
+          def lambda_handler(event, context):
+              responseData = {}
+              print(event)
+              # There is nothing to do for a delete request
+              if event[ 'RequestType' ] == 'Delete':
+                  responseData = {
+                      'StackId': event[ 'StackId' ],
+                      'RequestId': event[ 'RequestId' ],
+                      'LogicalResourceId': event[ 'LogicalResourceId' ],
+                      'Status': 'SUCCESS',
+                      'Data': {}
+                  }
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+              else:
+                  instanceId = event[ 'ResourceProperties' ][ 'instanceId' ]
+                  responseData = {
+                      'StackId': event[ 'StackId' ],
+                      'RequestId': event[ 'RequestId' ],
+                      'LogicalResourceId': event[ 'LogicalResourceId' ],
+                      'Status': 'SUCCESS'
+                  }
+                  try:
+                      # disable IMDSv1
+                      client = boto3.client('ec2')
+                      response = client.modify_instance_metadata_options(
+                      InstanceId=instanceId,
+                      HttpTokens='required',
+                      HttpEndpoint='enabled'
+                  )
+                  except botocore.exceptions.ClientError as error:
+                      responseData[ 'Status' ] = 'FAILED'
+                      responseData[ 'Reason' ] = error.response['Error']
+                      cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
+                  else:
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, "CustomResourcePhysicalID")
+
+#Outputs from the stack
+Outputs:
+  AppSgName:
+    Condition: isSupportedRegion
+    Description: EC2 App Security Group Name
+    Value: !Ref AppSg
+  EC2InstanceProfileName:
+    Condition: isSupportedRegion
+    Description: EC2 Instance Profile Name
+    Value: !If
+      - InstanceProfileNotProvided
+      - !Ref Ec2InstanceProfile
+      - !Ref InstanceProfileName
+  InstanceProfileSsmParameterPath:
+    Condition: isSupportedRegion
+    Description: EC2 Instance Profile SSM Parameter Path
+    Value: !Ref InstanceProfileSsmParameter
+  AppSecretSecretsManagerARN:
+    Condition: isSupportedRegion
+    Description: Application Secret AWS Secrets Manager
+    Value: !Ref AppSecretSecretsManager
+  AppSecretSSMParameterPath:
+    Condition: isSupportedRegion
+    Description: Application Secret SSM Parameter Path
+    Value: !Ref AppSecretSSMParameter
